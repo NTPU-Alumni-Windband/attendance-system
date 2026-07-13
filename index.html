@@ -177,11 +177,23 @@ function loadCoords(){
 }
 loadCoords();
 
-/* ---------- 由中間往兩側填色 ---------- */
-function centerOrder(m){ const c=(m-1)/2;
-  return [...Array(m).keys()].sort((a,b)=> Math.abs(a-c)-Math.abs(b-c) || a-b); }
+/* ---------- 填色方向設定 ---------- */
+const FILL_DIR={
+  Fl1:'right',Fl2:'right',Pic:'right',
+  Cl1:'right',Cl2:'right',Cl3:'right',BCl:'right',
+  ASax:'right',Tp:'right',Tb:'right',Euph:'right',Tuba:'right',
+  Hn:'left'
+};
+function fillOrder(slots,dir){
+  const idx=[...Array(slots.length).keys()];
+  if(dir==='right') idx.sort((a,b)=>slots[b][0]-slots[a][0]);  // x 大→小
+  else if(dir==='left') idx.sort((a,b)=>slots[a][0]-slots[b][0]); // x 小→大
+  else{ const c=(slots.length-1)/2; idx.sort((a,b)=>Math.abs(a-c)-Math.abs(b-c)||a-b); }
+  return idx;
+}
 function applyCount(g,n){ g.state=g.slots.map(()=>false);
-  const ord=centerOrder(g.slots.length); for(let i=0;i<n&&i<ord.length;i++) g.state[ord[i]]=true; }
+  const ord=fillOrder(g.slots, FILL_DIR[g.id]||'center');
+  for(let i=0;i<n&&i<ord.length;i++) g.state[ord[i]]=true; }
 function applyDate(){
   if(!attendance||!curDate) return;
   const day=attendance[curDate]||{};
