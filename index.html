@@ -1,0 +1,390 @@
+<meta charset="utf-8">
+<title>管樂團座位圖</title>
+<style>
+  :root{
+    --bg:#f7f9fc; --panel:#ffffff; --ink:#1e293b; --muted:#64748b;
+    --line:#e2e8f0; --accent:#0ea5e9; --accent2:#0284c7;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Segoe UI","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;}
+  .wrap{max-width:1500px;margin:0 auto;padding:18px 20px 60px;}
+  h1{font-size:20px;margin:0 0 2px;font-weight:700;letter-spacing:.5px;}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:14px;}
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:12px 14px;box-shadow:0 1px 3px rgba(15,23,42,.05);margin-bottom:14px;}
+  .toolbar .grp{display:flex;gap:8px;align-items:center;}
+  .toolbar .sep{width:1px;height:26px;background:var(--line);}
+  input[type=text],textarea,select{font:inherit;color:var(--ink);
+    border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:#fff;}
+  input[type=text]{width:320px;}
+  textarea{width:100%;height:120px;resize:vertical;font-size:12px;font-family:ui-monospace,Consolas,monospace;}
+  button{font:inherit;font-weight:600;cursor:pointer;border:none;border-radius:9px;
+    padding:8px 14px;background:var(--accent);color:#fff;transition:filter .15s;}
+  button:hover{filter:brightness(1.07);}
+  button.ghost{background:#eef2f7;color:var(--ink);}
+  button.on{background:#f59e0b;color:#fff;}
+  details{width:100%;}
+  details summary{cursor:pointer;color:var(--accent2);font-size:13px;font-weight:600;list-style:none;}
+  details summary::-webkit-details-marker{display:none}
+  .layout{display:grid;grid-template-columns:1fr 220px;gap:16px;align-items:start;}
+  .chartbox{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:8px;box-shadow:0 2px 8px rgba(15,23,42,.06);overflow:auto;}
+  svg{width:100%;height:auto;display:block;touch-action:none;}
+  .stats{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:14px;box-shadow:0 2px 8px rgba(15,23,42,.06);position:sticky;top:12px;}
+  .stats h2{font-size:14px;margin:0 0 10px;}
+  .stats table{width:100%;border-collapse:collapse;font-size:13px;}
+  .stats td{padding:3px 0;}
+  .stats td.n{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted);}
+  .stats tr.total td{border-top:1px solid var(--line);padding-top:7px;font-weight:700;color:var(--ink);}
+  .hint{color:var(--muted);font-size:12px;}
+  .msg{font-size:12px;}
+  @media(max-width:900px){.layout{grid-template-columns:1fr}.stats{position:static}}
+</style>
+
+<div class="wrap">
+  <h1>🎺 管樂團座位圖</h1>
+  <div class="sub" id="subtitle">載入中…</div>
+
+  <div class="toolbar">
+    <div class="grp">
+      <span class="hint">週次：</span>
+      <select id="dateSel"><option>（尚無資料）</option></select>
+      <button class="ghost" id="reload">重新載入試算表</button>
+    </div>
+    <div class="sep"></div>
+    <div class="grp">
+      <button class="ghost" id="allPresent">全到</button>
+      <button class="ghost" id="allAbsent">全缺</button>
+      <button id="exportPng">匯出 PNG</button>
+    </div>
+    <div class="sep"></div>
+    <div class="grp">
+      <button class="ghost" id="editBtn">✎ 編輯位置</button>
+      <button class="ghost" id="dumpBtn">輸出座標</button>
+      <button class="ghost" id="resetBtn">重設座標</button>
+    </div>
+    <div class="msg" id="msg"></div>
+
+    <details>
+      <summary>▸ 進階：手動貼上 CSV / 更換試算表網址</summary>
+      <div style="margin-top:8px">
+        <div class="grp" style="margin-bottom:8px">
+          <input type="text" id="csvUrl" placeholder="Google 試算表 CSV 匯出網址">
+          <button id="loadUrl">載入此網址</button>
+        </div>
+        <textarea id="csvText" placeholder="直接貼上 CSV 內容…"></textarea>
+        <div style="margin-top:6px"><button id="parseText">解析貼上的 CSV</button>
+          <span class="hint">自動偵測「姓名」欄與日期欄；出席填 V／O／1，缺席留空或 X。</span></div>
+        <textarea id="dumpOut" style="display:none;margin-top:8px;height:150px" readonly></textarea>
+      </div>
+    </details>
+  </div>
+
+  <div class="layout">
+    <div class="chartbox"><div id="svgHost"></div></div>
+    <div class="stats">
+      <h2>各聲部出席</h2>
+      <table id="statsTbl"></table>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   座位設定區 —— 位置 / 人名 / 順序都改這裡
+   x,y = SVG 座標（viewBox 0 0 1380 700）；slots 數量必須等於 members 數量
+   （也可以直接用「✎ 編輯位置」拖曳，會自動記住）
+   ============================================================ */
+const GROUPS = [
+  // 長笛
+  {id:'Fl1', abbr:'Fl',  label:'1st Fl',  fam:'長笛', members:['楊竣安','李庭羽'],
+   slots:[[686,270],[773,255]]},
+  {id:'Fl2', abbr:'Fl',  label:'2nd Fl',  fam:'長笛', members:['謝晴安','黃宗緯','曾瓊瑩'],
+   slots:[[479,144],[531,210],[602,253]]},
+  {id:'Pic', abbr:'Pic', label:'Picc',    fam:'長笛', members:['鄭奎佑'],
+   slots:[[850,209]]},
+  // 雙簧管
+  {id:'Ob',  abbr:'Ob',  label:'Oboe',    fam:'雙簧管', members:['陳佩雯'],
+   slots:[[454,72]]},
+  // 豎笛
+  {id:'Cl1', abbr:'Cl',  label:'1st Cl',  fam:'豎笛', members:['林尚頤','張捷勝'],
+   slots:[[926,72],[902,142]]},
+  {id:'Cl2', abbr:'Cl',  label:'2nd Cl',  fam:'豎笛', members:['楊舒喻','王昱婷'],
+   slots:[[1031,128],[1000,202]]},
+  {id:'Cl3', abbr:'Cl',  label:'3rd Cl',  fam:'豎笛', members:['吳欣晏','鄭伊玲'],
+   slots:[[952,269],[891,323]]},
+  {id:'BCl', abbr:'B.Cl',label:'Bass Cl', fam:'豎笛', members:['李硯恆'],
+   slots:[[251,168]]},
+  // 薩克斯風
+  {id:'ASax',abbr:'A.Sx',label:'Alto Sax',fam:'薩克斯風', members:['連啟淳','孫弗諼','吳彧廷','施懿紘'],
+   slots:[[346,117],[385,212],[443,285],[535,349]]},
+  {id:'TSax',abbr:'T.Sx',label:'Tenor Sax',fam:'薩克斯風', members:['徐璿芠'],
+   slots:[[351,341]]},
+  {id:'BSax',abbr:'B.Sx',label:'Bari Sax', fam:'薩克斯風', members:['李以諾'],
+   slots:[[290,258]]},
+  // 法國號
+  {id:'Hn',  abbr:'Hn',  label:'Horn',    fam:'法國號', members:['江宛容','賴易良','郭柔君','郭盈萱','李冠達'],
+   slots:[[900,439],[983,385],[1050,316],[1093,251],[1123,184]]},
+  // 小號
+  {id:'Tp',  abbr:'Tp',  label:'Trumpet', fam:'小號',
+   members:['林志祥','林辰蓉','林政勳','蔡嘉憲','李維家','曾芷庭','卓語喬','曾建斌','林建勳','陸慧敏'],
+   slots:[[608,614],[704,620],[795,611],[870,592],[948,561],[1029,513],[1093,461],[1152,397],[1199,328],[1234,258]]},
+  // 長號
+  {id:'Tb',  abbr:'Tb',  label:'Trombone',fam:'長號', members:['蘇祥智','陳柏臻','邱琬玉','陳婉穎'],
+   slots:[[277,451],[344,508],[425,557],[512,593]]},
+  // 上低音號
+  {id:'Euph',abbr:'Eu',  label:'Euph',    fam:'上低音號', members:['徐綱','何家樂'],
+   slots:[[709,490],[618,484]]},
+  // 低音號
+  {id:'Tuba',abbr:'Tu',  label:'Tuba',    fam:'低音號', members:['趙志仁','楊霆翔','許少謙'],
+   slots:[[133,223],[216,382],[168,305]]},
+  // 低音提琴
+  {id:'Bass',abbr:'Bs',  label:'Bass',    fam:'低音提琴', members:['江慎哲'],
+   slots:[[72,165]]},
+  // 鋼琴
+  {id:'Piano',abbr:'Pf', label:'Piano',   fam:'鋼琴', members:['曾子政'],
+   slots:[[1112,58]]},
+];
+// 打擊（文字框）
+const PERC = {fam:'打擊', members:['王姿云','王郁淇','鄭伊琳','施妤柔','黃玳歆','林欣儀','劉雋軒','李佳融'],
+  box:[150,598,222,96]};   // x,y,w,h
+
+const FAM_ORDER = ['長笛','雙簧管','豎笛','薩克斯風','法國號','小號','長號','上低音號','低音號','低音提琴','鋼琴','打擊'];
+const DEFAULT_CSV_URL="https://docs.google.com/spreadsheets/d/1ZAFSh-IXcQv7YozLhxAVm6M17vg3BIEM3j4IBdWF_Kk/export?format=csv";
+const R = 30, VB = [0,0,1380,700];
+
+/* ---------- 狀態 ---------- */
+let attendance=null, dates=[], curDate=null, editMode=false;
+GROUPS.forEach(g=> g.state=g.slots.map(()=>false));
+let percPresent=0;
+
+// 記住原始座標（供「重設座標」）＋讀取瀏覽器存的自訂座標
+const DEFAULTS={perc:JSON.parse(JSON.stringify(PERC.box))};
+GROUPS.forEach(g=> DEFAULTS[g.id]=JSON.parse(JSON.stringify(g.slots)));
+function saveCoords(){
+  const d={perc:PERC.box}; GROUPS.forEach(g=> d[g.id]=g.slots);
+  try{localStorage.setItem('seatCoords_v1',JSON.stringify(d));}catch(e){}
+}
+function loadCoords(){
+  try{
+    const d=JSON.parse(localStorage.getItem('seatCoords_v1')||'null'); if(!d) return;
+    GROUPS.forEach(g=>{ if(d[g.id]&&d[g.id].length===g.slots.length) g.slots=d[g.id]; });
+    if(d.perc&&d.perc.length===4) PERC.box=d.perc;
+  }catch(e){}
+}
+loadCoords();
+
+/* ---------- 由中間往兩側填色 ---------- */
+function centerOrder(m){ const c=(m-1)/2;
+  return [...Array(m).keys()].sort((a,b)=> Math.abs(a-c)-Math.abs(b-c) || a-b); }
+function applyCount(g,n){ g.state=g.slots.map(()=>false);
+  const ord=centerOrder(g.slots.length); for(let i=0;i<n&&i<ord.length;i++) g.state[ord[i]]=true; }
+function applyDate(){
+  if(!attendance||!curDate) return;
+  const day=attendance[curDate]||{};
+  GROUPS.forEach(g=> applyCount(g, g.members.reduce((s,n)=> s+(day[n]?1:0),0)));
+  percPresent=PERC.members.reduce((s,n)=> s+(day[n]?1:0),0);
+  render();
+}
+
+/* ============================================================ 繪圖 */
+const NS='http://www.w3.org/2000/svg';
+function el(tag,attrs,txt){ const e=document.createElementNS(NS,tag);
+  for(const k in attrs) e.setAttribute(k,attrs[k]); if(txt!=null) e.textContent=txt; return e; }
+
+function render(){
+  const svg=el('svg',{id:'chart',viewBox:VB.join(' '),xmlns:NS,
+    'font-family':'"Segoe UI","Noto Sans TC","Microsoft JhengHei",sans-serif'});
+  const defs=el('defs');
+  defs.innerHTML=
+    '<linearGradient id="gOn" x1="0" y1="0" x2="0" y2="1">'+
+      '<stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#0284c7"/></linearGradient>'+
+    '<filter id="sh" x="-40%" y="-40%" width="180%" height="180%">'+
+      '<feDropShadow dx="0" dy="2" stdDeviation="2.4" flood-color="#0f172a" flood-opacity="0.18"/></filter>';
+  svg.appendChild(defs);
+  svg.appendChild(el('rect',{x:VB[0],y:VB[1],width:VB[2],height:VB[3],fill:'#ffffff'}));
+
+  svg.appendChild(el('text',{x:24,y:32,'font-size':22,'font-weight':'700',fill:'#0f172a'},'管樂團座位圖'));
+  svg.appendChild(el('text',{x:24,y:54,'font-size':15,fill:'#64748b'},
+      curDate?('週次：'+curDate):'手動編輯模式'));
+
+  // 指揮台
+  const podX=690,podY=8;
+  svg.appendChild(el('rect',{x:podX-70,y:podY,width:140,height:38,rx:8,
+    fill:'#fef3c7',stroke:'#f59e0b','stroke-width':1.5}));
+  svg.appendChild(el('text',{x:podX,y:podY+24,'text-anchor':'middle','font-size':15,
+    'font-weight':'700',fill:'#92400e'},'指揮台 ▲'));
+
+  GROUPS.forEach(g=>{
+    const xs=g.slots.map(s=>s[0]), ys=g.slots.map(s=>s[1]);
+    const lx=(Math.min(...xs)+Math.max(...xs))/2, ly=Math.min(...ys)-R-12;
+    svg.appendChild(el('text',{x:lx,y:ly,'text-anchor':'middle','font-size':13,
+      'font-weight':'700',fill:'#334155'}, g.label));
+
+    g.slots.forEach((s,i)=>{
+      const present=g.state[i];
+      const grp=el('g',{style:'cursor:'+(editMode?'move':'pointer')});
+      if(editMode) grp.addEventListener('pointerdown',ev=>startDrag({type:'slot',g,i},ev));
+      else grp.addEventListener('click',()=>{ g.state[i]=!g.state[i]; curDate=curDate; render(); });
+      if(present){
+        grp.appendChild(el('circle',{cx:s[0],cy:s[1],r:R,fill:'url(#gOn)',
+          stroke:'#0369a1','stroke-width':1.5,filter:'url(#sh)'}));
+        grp.appendChild(el('text',{x:s[0],y:s[1]+5,'text-anchor':'middle',
+          'font-size':14,'font-weight':'700',fill:'#ffffff'},g.abbr));
+      }else{
+        grp.appendChild(el('circle',{cx:s[0],cy:s[1],r:R,fill:'#f1f5f9',
+          stroke:'#cbd5e1','stroke-width':1.5,'stroke-dasharray':'4 3'}));
+        grp.appendChild(el('text',{x:s[0],y:s[1]+5,'text-anchor':'middle',
+          'font-size':14,'font-weight':'600',fill:'#94a3b8'},g.abbr));
+      }
+      svg.appendChild(grp);
+    });
+  });
+
+  // 打擊文字框
+  const [bx,by,bw,bh]=PERC.box, pOn=percPresent, pTot=PERC.members.length;
+  const pbox=el('g',{style:'cursor:'+(editMode?'move':'default')});
+  if(editMode) pbox.addEventListener('pointerdown',ev=>startDrag({type:'perc'},ev));
+  pbox.appendChild(el('rect',{x:bx,y:by,width:bw,height:bh,rx:12,
+    fill:pOn>0?'#ecfeff':'#f8fafc',stroke:pOn>0?'#0891b2':'#cbd5e1','stroke-width':1.8}));
+  pbox.appendChild(el('text',{x:bx+bw/2,y:by+34,'text-anchor':'middle','font-size':17,
+    'font-weight':'700',fill:'#155e75'},'打 擊'));
+  pbox.appendChild(el('text',{x:bx+bw/2,y:by+64,'text-anchor':'middle','font-size':22,
+    'font-weight':'800',fill:pOn>0?'#0e7490':'#94a3b8'},'出席 '+pOn+' / '+pTot));
+  svg.appendChild(pbox);
+  if(!editMode){
+    const mk=(cx,txt,fn)=>{ const gg=el('g',{style:'cursor:pointer'}); gg.addEventListener('click',fn);
+      gg.appendChild(el('circle',{cx:cx,cy:by+bh-14,r:11,fill:'#e0f2fe',stroke:'#0891b2'}));
+      gg.appendChild(el('text',{x:cx,y:by+bh-10,'text-anchor':'middle','font-size':15,
+        'font-weight':'800',fill:'#0369a1'},txt)); svg.appendChild(gg); };
+    mk(bx+bw-58,'–',()=>{ percPresent=Math.max(0,percPresent-1); render(); });
+    mk(bx+bw-26,'+',()=>{ percPresent=Math.min(pTot,percPresent+1); render(); });
+  }
+
+  const host=document.getElementById('svgHost'); host.innerHTML=''; host.appendChild(svg);
+  renderStats();
+  document.getElementById('subtitle').textContent = editMode
+    ? '✎ 編輯位置模式：直接拖曳圓圈或打擊框調整位置（自動記住）。完成後再按一次「編輯位置」離開。'
+    : (curDate ? ('目前顯示週次：'+curDate+'　（點圓圈可手動切換出席）')
+               : '手動編輯模式 — 點圓圈或用打擊 ± 調整');
+}
+
+function renderStats(){
+  const agg={}; FAM_ORDER.forEach(f=> agg[f]={on:0,tot:0});
+  GROUPS.forEach(g=>{ agg[g.fam].on+=g.state.filter(Boolean).length; agg[g.fam].tot+=g.slots.length; });
+  agg['打擊'].on=percPresent; agg['打擊'].tot=PERC.members.length;
+  let totOn=0,totAll=0,rows='';
+  FAM_ORDER.forEach(f=>{ const a=agg[f]; totOn+=a.on; totAll+=a.tot;
+    rows+=`<tr><td>${f}</td><td class="n">${a.on}/${a.tot}</td></tr>`; });
+  rows+=`<tr class="total"><td>合計</td><td class="n">${totOn}/${totAll}</td></tr>`;
+  document.getElementById('statsTbl').innerHTML=rows;
+}
+
+/* ---------- 拖曳 ---------- */
+let drag=null;
+function svgPt(ev){ const svg=document.getElementById('chart');
+  const p=svg.createSVGPoint(); p.x=ev.clientX; p.y=ev.clientY;
+  const q=p.matrixTransform(svg.getScreenCTM().inverse()); return [Math.round(q.x),Math.round(q.y)]; }
+function startDrag(ref,ev){ ev.preventDefault(); drag=ref;
+  window.addEventListener('pointermove',onMove); window.addEventListener('pointerup',endDrag); }
+function onMove(ev){ if(!drag) return; const [x,y]=svgPt(ev);
+  if(drag.type==='slot') drag.g.slots[drag.i]=[x,y];
+  else if(drag.type==='perc'){ PERC.box[0]=x-PERC.box[2]/2; PERC.box[1]=y-PERC.box[3]/2; }
+  render(); }
+function endDrag(){ drag=null; saveCoords();
+  window.removeEventListener('pointermove',onMove); window.removeEventListener('pointerup',endDrag); }
+
+/* ============================================================ CSV */
+function parseCSV(text){
+  const rows=[]; let row=[],cur='',q=false;
+  for(let i=0;i<text.length;i++){ const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else{ if(c==='"') q=true; else if(c===','){ row.push(cur); cur=''; }
+      else if(c==='\n'){ row.push(cur); rows.push(row); row=[]; cur=''; }
+      else if(c==='\r'){} else cur+=c; } }
+  if(cur!==''||row.length){ row.push(cur); rows.push(row); }
+  return rows;
+}
+function truthy(v){ const s=(v||'').trim().toUpperCase();
+  return s==='O'||s==='1'||s==='V'||s==='✓'||s==='是'||s==='TRUE'; }
+function ingest(text){
+  const rows=parseCSV(text).filter(r=> r.some(c=>(c||'').trim()!==''));
+  if(rows.length<2){ showMsg('CSV 內容不足','#b91c1c'); return; }
+  const header=rows[0].map(h=>(h||'').trim());
+  let nameCol=header.indexOf('姓名'); if(nameCol<0) nameCol=0;
+  const dateCols=[]; header.forEach((h,i)=>{ if(/\d+\s*\/\s*\d+/.test(h)) dateCols.push(i); });
+  if(!dateCols.length){ showMsg('找不到日期欄（標題需含日期，如 7/11）','#b91c1c'); return; }
+  dates=dateCols.map(i=>header[i]);
+  attendance={}; dates.forEach(d=> attendance[d]={});
+  const known=new Set(); GROUPS.forEach(g=>g.members.forEach(m=>known.add(m))); PERC.members.forEach(m=>known.add(m));
+  const unknown=[];
+  for(let r=1;r<rows.length;r++){ const name=(rows[r][nameCol]||'').trim(); if(!name) continue;
+    if(!known.has(name)) unknown.push(name);
+    dateCols.forEach((ci,di)=> attendance[dates[di]][name]=truthy(rows[r][ci])); }
+  // 預設選「最後一個有出席紀錄」的週次
+  let def=0; dates.forEach((d,i)=>{ if(Object.values(attendance[d]).some(v=>v)) def=i; });
+  curDate=dates[def];
+  const sel=document.getElementById('dateSel');
+  sel.innerHTML=dates.map(d=>`<option${d===curDate?' selected':''}>${d}</option>`).join('');
+  applyDate();
+  showMsg(unknown.length? ('⚠ 名字對不上（已忽略）：'+[...new Set(unknown)].join('、')) : '✓ 已載入試算表',
+          unknown.length?'#b45309':'#059669');
+}
+function showMsg(t,color){ const m=document.getElementById('msg'); m.textContent=t||''; m.style.color=color||'#64748b'; }
+
+/* ============================================================ 事件 */
+document.getElementById('csvUrl').value=DEFAULT_CSV_URL;
+async function loadFromUrl(url){
+  showMsg('載入中…','#0369a1');
+  try{ const r=await fetch(url); if(!r.ok) throw new Error('HTTP '+r.status);
+    ingest(await r.text()); }
+  catch(e){ showMsg('自動載入失敗（可改用進階區貼上 CSV）：'+e.message,'#b91c1c'); }
+}
+document.getElementById('reload').onclick=()=> loadFromUrl(document.getElementById('csvUrl').value.trim()||DEFAULT_CSV_URL);
+document.getElementById('loadUrl').onclick=()=>{ const u=document.getElementById('csvUrl').value.trim();
+  if(!u){ showMsg('請先貼上網址','#b91c1c'); return; } loadFromUrl(u); };
+document.getElementById('parseText').onclick=()=>{ const t=document.getElementById('csvText').value;
+  if(!t.trim()){ showMsg('請先貼上 CSV 內容','#b91c1c'); return; } ingest(t); };
+document.getElementById('dateSel').onchange=e=>{ curDate=e.target.value; applyDate(); };
+document.getElementById('allPresent').onclick=()=>{ GROUPS.forEach(g=>g.state=g.slots.map(()=>true));
+  percPresent=PERC.members.length; curDate=null; render(); };
+document.getElementById('allAbsent').onclick=()=>{ GROUPS.forEach(g=>g.state=g.slots.map(()=>false));
+  percPresent=0; curDate=null; render(); };
+
+document.getElementById('editBtn').onclick=e=>{ editMode=!editMode;
+  e.target.classList.toggle('on',editMode); e.target.textContent=editMode?'✓ 完成編輯':'✎ 編輯位置'; render(); };
+document.getElementById('resetBtn').onclick=()=>{
+  GROUPS.forEach(g=> g.slots=JSON.parse(JSON.stringify(DEFAULTS[g.id])));
+  PERC.box=JSON.parse(JSON.stringify(DEFAULTS.perc));
+  try{localStorage.removeItem('seatCoords_v1');}catch(e){}
+  if(attendance&&curDate) applyDate(); else render();
+  showMsg('已重設為預設座標','#64748b'); };
+document.getElementById('dumpBtn').onclick=()=>{
+  let s='// 貼回 GROUPS 的對應 slots：\n';
+  GROUPS.forEach(g=> s+=`${g.id}: [${g.slots.map(p=>'['+p[0]+','+p[1]+']').join(',')}]\n`);
+  s+=`PERC.box: [${PERC.box.join(',')}]`;
+  const ta=document.getElementById('dumpOut'); ta.style.display='block'; ta.value=s; ta.select();
+  const d=document.querySelector('details'); if(d) d.open=true;
+  showMsg('座標已輸出到下方進階區（可複製給我貼進檔案）','#059669'); };
+
+document.getElementById('exportPng').onclick=()=>{
+  const svg=document.getElementById('chart');
+  const xml=new XMLSerializer().serializeToString(svg);
+  const blob=new Blob(['<?xml version="1.0" encoding="UTF-8"?>\n'+xml],{type:'image/svg+xml;charset=utf-8'});
+  const url=URL.createObjectURL(blob), img=new Image();
+  img.onload=()=>{ const s=2,c=document.createElement('canvas');
+    c.width=VB[2]*s; c.height=VB[3]*s; const ctx=c.getContext('2d');
+    ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(img,0,0,c.width,c.height);
+    URL.revokeObjectURL(url); const a=document.createElement('a');
+    a.download='座位圖'+(curDate?('_'+curDate.replace(/[\/（）\s]/g,'-')):'')+'.png';
+    a.href=c.toDataURL('image/png'); a.click(); };
+  img.onerror=()=>showMsg('PNG 匯出失敗','#b91c1c'); img.src=url;
+};
+
+/* ---------- 啟動 ---------- */
+render();
+loadFromUrl(DEFAULT_CSV_URL);   // 開檔自動載入內建試算表
+</script>
