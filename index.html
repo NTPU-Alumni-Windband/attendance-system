@@ -136,10 +136,10 @@ const GROUPS = [
   {id:'Tb',  abbr:'Tb',  label:'Trombone',fam:'長號', members:['蘇祥智','陳柏臻','邱琬玉','陳婉穎'],
    slots:[[277,451],[344,508],[425,557],[512,593]]},
   // 上低音號
-  {id:'Euph',abbr:'Eu',  label:'Euph',    fam:'上低音號', members:['徐綱','何家樂'],
+  {id:'Euph',abbr:'Euph',label:'Euph',    fam:'上低音號', members:['徐綱','何家樂'],
    slots:[[709,490],[618,484]]},
   // 低音號
-  {id:'Tuba',abbr:'Tu',  label:'Tuba',    fam:'低音號', members:['趙志仁','楊霆翔','許少謙'],
+  {id:'Tuba',abbr:'Tuba',label:'Tuba',    fam:'低音號', members:['趙志仁','楊霆翔','許少謙'],
    slots:[[133,223],[216,382],[168,305]]},
   // 低音提琴
   {id:'Bass',abbr:'D.B', label:'Bass',    fam:'低音提琴', members:['江慎哲'],
@@ -216,7 +216,7 @@ function render(){
   svg.appendChild(el('rect',{x:podX-70,y:podY,width:140,height:38,rx:8,
     fill:'#fef3c7',stroke:'#f59e0b','stroke-width':1.5}));
   svg.appendChild(el('text',{x:podX,y:podY+24,'text-anchor':'middle','font-size':15,
-    'font-weight':'700',fill:'#92400e'},'指揮台 ▲'));
+    'font-weight':'700',fill:'#92400e'},'指揮台'));
 
   GROUPS.forEach(g=>{
     g.slots.forEach((s,i)=>{
