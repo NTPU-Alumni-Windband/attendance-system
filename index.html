@@ -266,17 +266,17 @@ function render(){
   const stands  = nonPercOn + 1 - (pianoOn ? 1 : 0);  // +1指揮，鋼琴有來扣1
   const chairs  = nonPercOn     - (pianoOn ? 1 : 0);  // 鋼琴有來扣1
   const highChairs = bassOn ? 1 : 0;
-  const ex=1060,ey=580,ew=240,eh=100;
+  const ex=1080,ey=580,ew=180,eh=100;
   const ebox=el('g',{});
   ebox.appendChild(el('rect',{x:ex,y:ey,width:ew,height:eh,rx:12,
     fill:'#fefce8',stroke:'#ca8a04','stroke-width':1.8}));
   ebox.appendChild(el('text',{x:ex+ew/2,y:ey+22,'text-anchor':'middle',
     'font-size':15,'font-weight':'700',fill:'#78350f'},'器材需求'));
-  ebox.appendChild(el('text',{x:ex+16,y:ey+46,'font-size':14,fill:'#1e293b'},
-    '譜架　'+stands+' 架'));
-  ebox.appendChild(el('text',{x:ex+16,y:ey+66,'font-size':14,fill:'#1e293b'},
+  ebox.appendChild(el('text',{x:ex+14,y:ey+46,'font-size':14,fill:'#1e293b'},
+    '譜架　'+stands+' 個'));
+  ebox.appendChild(el('text',{x:ex+14,y:ey+66,'font-size':14,fill:'#1e293b'},
     '椅子　'+chairs+' 張'));
-  ebox.appendChild(el('text',{x:ex+16,y:ey+86,'font-size':14,fill:'#1e293b'},
+  ebox.appendChild(el('text',{x:ex+14,y:ey+86,'font-size':14,fill:'#1e293b'},
     '高腳椅 '+highChairs+' 張'));
   svg.appendChild(ebox);
 
