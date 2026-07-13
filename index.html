@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>管樂團座位圖</title>
+<title>北大校第五屆座位圖</title>
 <style>
   :root{
     --bg:#f7f9fc; --panel:#ffffff; --ink:#1e293b; --muted:#64748b;
@@ -45,7 +45,7 @@
 </style>
 
 <div class="wrap">
-  <h1>🎺 管樂團座位圖</h1>
+  <h1>🎺 北大校第五屆座位圖</h1>
   <div class="sub" id="subtitle">載入中…</div>
 
   <div class="toolbar">
@@ -142,10 +142,10 @@ const GROUPS = [
   {id:'Tuba',abbr:'Tu',  label:'Tuba',    fam:'低音號', members:['趙志仁','楊霆翔','許少謙'],
    slots:[[133,223],[216,382],[168,305]]},
   // 低音提琴
-  {id:'Bass',abbr:'Bs',  label:'Bass',    fam:'低音提琴', members:['江慎哲'],
+  {id:'Bass',abbr:'D.B', label:'Bass',    fam:'低音提琴', members:['江慎哲'],
    slots:[[72,165]]},
   // 鋼琴
-  {id:'Piano',abbr:'Pf', label:'Piano',   fam:'鋼琴', members:['曾子政'],
+  {id:'Piano',abbr:'Pno.',label:'Piano',   fam:'鋼琴', members:['曾子政'],
    slots:[[1112,58]]},
 ];
 // 打擊（文字框）
@@ -207,7 +207,7 @@ function render(){
   svg.appendChild(defs);
   svg.appendChild(el('rect',{x:VB[0],y:VB[1],width:VB[2],height:VB[3],fill:'#ffffff'}));
 
-  svg.appendChild(el('text',{x:24,y:32,'font-size':22,'font-weight':'700',fill:'#0f172a'},'管樂團座位圖'));
+  svg.appendChild(el('text',{x:24,y:32,'font-size':22,'font-weight':'700',fill:'#0f172a'},'北大校第五屆座位圖'));
   svg.appendChild(el('text',{x:24,y:54,'font-size':15,fill:'#64748b'},
       curDate?('週次：'+curDate):'手動編輯模式'));
 
@@ -260,23 +260,26 @@ function render(){
   }
 
   // 譜架/椅子/高腳椅資訊框
-  const pianoOn = GROUPS.find(g=>g.id==='Piano').state.some(Boolean);
-  const bassOn  = GROUPS.find(g=>g.id==='Bass').state.some(Boolean);
+  const pianoN = GROUPS.find(g=>g.id==='Piano').state.filter(Boolean).length;
+  const bassN  = GROUPS.find(g=>g.id==='Bass').state.filter(Boolean).length;
   const nonPercOn = GROUPS.reduce((s,g)=> s+g.state.filter(Boolean).length, 0);
-  const stands  = nonPercOn + 1 - (pianoOn ? 1 : 0);  // +1指揮，鋼琴有來扣1
-  const chairs  = nonPercOn     - (pianoOn ? 1 : 0);  // 鋼琴有來扣1
-  const highChairs = bassOn ? 1 : 0;
-  const ex=1080,ey=580,ew=180,eh=100;
+  // nonPercOn 已不含打擊（percPresent 另計）
+  const stands     = 1 + nonPercOn - pianoN;           // 指揮1 + 非打擊出席 - 鋼琴
+  const chairs     = nonPercOn - pianoN - bassN;        // 非打擊出席 - 鋼琴 - 低音提琴
+  const highChairs = bassN;                             // 低音提琴出席人數
+  const ex=1080,ey=575,ew=185,eh=110;
   const ebox=el('g',{});
   ebox.appendChild(el('rect',{x:ex,y:ey,width:ew,height:eh,rx:12,
     fill:'#fefce8',stroke:'#ca8a04','stroke-width':1.8}));
   ebox.appendChild(el('text',{x:ex+ew/2,y:ey+22,'text-anchor':'middle',
     'font-size':15,'font-weight':'700',fill:'#78350f'},'器材需求'));
-  ebox.appendChild(el('text',{x:ex+14,y:ey+46,'font-size':14,fill:'#1e293b'},
+  ebox.appendChild(el('text',{x:ex+ew/2,y:ey+36,'text-anchor':'middle',
+    'font-size':11,fill:'#92400e'},'(不含打擊)'));
+  ebox.appendChild(el('text',{x:ex+14,y:ey+55,'font-size':14,fill:'#1e293b'},
     '譜架　'+stands+' 個'));
-  ebox.appendChild(el('text',{x:ex+14,y:ey+66,'font-size':14,fill:'#1e293b'},
+  ebox.appendChild(el('text',{x:ex+14,y:ey+75,'font-size':14,fill:'#1e293b'},
     '椅子　'+chairs+' 張'));
-  ebox.appendChild(el('text',{x:ex+14,y:ey+86,'font-size':14,fill:'#1e293b'},
+  ebox.appendChild(el('text',{x:ex+14,y:ey+95,'font-size':14,fill:'#1e293b'},
     '高腳椅 '+highChairs+' 張'));
   svg.appendChild(ebox);
 
