@@ -275,12 +275,12 @@ function render(){
     'font-size':15,'font-weight':'700',fill:'#78350f'},'器材需求'));
   ebox.appendChild(el('text',{x:ex+ew/2,y:ey+36,'text-anchor':'middle',
     'font-size':11,fill:'#92400e'},'(不含打擊)'));
-  ebox.appendChild(el('text',{x:ex+14,y:ey+55,'font-size':14,fill:'#1e293b'},
-    '譜架　'+stands+' 個'));
-  ebox.appendChild(el('text',{x:ex+14,y:ey+75,'font-size':14,fill:'#1e293b'},
-    '椅子　'+chairs+' 張'));
-  ebox.appendChild(el('text',{x:ex+14,y:ey+95,'font-size':14,fill:'#1e293b'},
-    '高腳椅 '+highChairs+' 張'));
+  ebox.appendChild(el('text',{x:ex+ew/2,y:ey+55,'text-anchor':'middle','font-size':14,fill:'#1e293b'},
+    '譜架　'+stands+'　個'));
+  ebox.appendChild(el('text',{x:ex+ew/2,y:ey+75,'text-anchor':'middle','font-size':14,fill:'#1e293b'},
+    '椅子　'+chairs+'　張'));
+  ebox.appendChild(el('text',{x:ex+ew/2,y:ey+95,'text-anchor':'middle','font-size':14,fill:'#1e293b'},
+    '高腳椅　'+highChairs+'　張'));
   svg.appendChild(ebox);
 
   const host=document.getElementById('svgHost'); host.innerHTML=''; host.appendChild(svg);
