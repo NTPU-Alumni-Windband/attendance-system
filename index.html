@@ -109,9 +109,16 @@ const GROUPS = [
   // 雙簧管
   {id:'Ob',  abbr:'Ob',  label:'Oboe',    fam:'雙簧管', members:['陳佩雯'],
    slots:[[438,75]]},
+  {id:'Ob2', abbr:'Ob',  label:'Oboe',    fam:'雙簧管', alwaysPresent:true, members:[],
+   slots:[[395,95]]},
+  // 低音管
+  {id:'Bsn', abbr:'Bsn', label:'Bassoon', fam:'雙簧管', alwaysPresent:true, members:[],
+   slots:[[200,92]]},
   // 豎笛
   {id:'Cl1', abbr:'Cl',  label:'1st Cl',  fam:'豎笛', members:['林尚頤','張捷勝'],
    slots:[[937,79],[892,144]]},
+  {id:'EbCl',abbr:'Eb',  label:'Eb Cl',   fam:'豎笛', alwaysPresent:true, members:[],
+   slots:[[838,190]]},
   {id:'Cl2', abbr:'Cl',  label:'2nd Cl',  fam:'豎笛', members:['楊舒喻','王昱婷'],
    slots:[[1044,135],[1000,202]]},
   {id:'Cl3', abbr:'Cl',  label:'3rd Cl',  fam:'豎笛', members:['吳欣晏','鄭伊玲'],
@@ -135,6 +142,8 @@ const GROUPS = [
   // 長號
   {id:'Tb',  abbr:'Tb',  label:'Trombone',fam:'長號', members:['蘇祥智','陳柏臻','邱琬玉','陳婉穎'],
    slots:[[304,474],[374,531],[459,580],[548,611]]},
+  {id:'Tb5', abbr:'Tb',  label:'Trombone',fam:'長號', alwaysPresent:true, members:[],
+   slots:[[640,638]]},
   // 上低音號
   {id:'Euph',abbr:'Euph',label:'Euph',    fam:'上低音號', members:['徐綱','何家樂'],
    slots:[[732,516],[646,503]]},
@@ -158,7 +167,7 @@ const R = 30, VB = [0,0,1380,700];
 
 /* ---------- 狀態 ---------- */
 let attendance=null, dates=[], curDate=null, editMode=false;
-GROUPS.forEach(g=> g.state=g.slots.map(()=>false));
+GROUPS.forEach(g=> g.state=g.slots.map(()=>!!g.alwaysPresent));
 let percPresent=0;
 
 // 記住原始座標（供「重設座標」）＋讀取瀏覽器存的自訂座標
@@ -197,7 +206,7 @@ function applyCount(g,n){ g.state=g.slots.map(()=>false);
 function applyDate(){
   if(!attendance||!curDate) return;
   const day=attendance[curDate]||{};
-  GROUPS.forEach(g=> applyCount(g, g.members.reduce((s,n)=> s+(day[n]?1:0),0)));
+  GROUPS.forEach(g=>{ if(!g.alwaysPresent) applyCount(g, g.members.reduce((s,n)=> s+(day[n]?1:0),0)); });
   percPresent=PERC.members.reduce((s,n)=> s+(day[n]?1:0),0);
   render();
 }
@@ -382,7 +391,7 @@ document.getElementById('parseText').onclick=()=>{ const t=document.getElementBy
 document.getElementById('dateSel').onchange=e=>{ curDate=e.target.value; applyDate(); };
 document.getElementById('allPresent').onclick=()=>{ GROUPS.forEach(g=>g.state=g.slots.map(()=>true));
   percPresent=PERC.members.length; curDate=null; render(); };
-document.getElementById('allAbsent').onclick=()=>{ GROUPS.forEach(g=>g.state=g.slots.map(()=>false));
+document.getElementById('allAbsent').onclick=()=>{ GROUPS.forEach(g=>{ if(!g.alwaysPresent) g.state=g.slots.map(()=>false); });
   percPresent=0; curDate=null; render(); };
 
 document.getElementById('editBtn').onclick=e=>{ editMode=!editMode;
