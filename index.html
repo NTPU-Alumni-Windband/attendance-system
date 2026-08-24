@@ -312,13 +312,12 @@ function render(){
   svg.appendChild(ebox);
   if(!editMode){
     const mkE=(cx,cy,txt,fn)=>{const gg=el('g',{style:'cursor:pointer'});gg.addEventListener('click',fn);
-      gg.appendChild(el('circle',{cx,cy,r:9,fill:'#fef3c7',stroke:'#d97706','stroke-width':1.2}));
-      gg.appendChild(el('text',{x:cx,y:cy+4,'text-anchor':'middle','font-size':13,'font-weight':'800',fill:'#92400e'},txt));
+      gg.appendChild(el('text',{x:cx,y:cy,'text-anchor':'middle','font-size':15,'font-weight':'700',fill:'#b0bec5'},txt));
       svg.appendChild(gg);};
-    [{key:'stands',base:stands,dy:49},{key:'chairs',base:chairs,dy:69},{key:'highChairs',base:highChairs,dy:89}]
+    [{key:'stands',base:stands,dy:55},{key:'chairs',base:chairs,dy:75},{key:'highChairs',base:highChairs,dy:95}]
     .forEach(({key,base,dy})=>{
-      mkE(ex+ew/2-22,ey+dy,'−',()=>{equipAdj[key]=Math.max(-base,equipAdj[key]-1);render();});
-      mkE(ex+ew/2+22,ey+dy,'+',()=>{equipAdj[key]++;render();});
+      mkE(ex+ew/2-26,ey+dy,'−',()=>{equipAdj[key]=Math.max(-base,equipAdj[key]-1);render();});
+      mkE(ex+ew/2+26,ey+dy,'+',()=>{equipAdj[key]++;render();});
     });
   }
 
