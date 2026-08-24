@@ -101,24 +101,24 @@
 const GROUPS = [
   // 長笛
   {id:'Fl1', abbr:'Fl',  label:'1st Fl',  fam:'長笛', members:['楊竣安','李庭羽'],
-   slots:[[688,303],[769,290]]},
+   slots:[[654,274],[734,278]]},
   {id:'Fl2', abbr:'Fl',  label:'2nd Fl',  fam:'長笛', members:['謝晴安','黃宗緯'],
-   slots:[[550,242],[613,278]]},
+   slots:[[514,198],[573,249]]},
   {id:'Pic', abbr:'Pic', label:'Picc',    fam:'長笛', members:['鄭奎佑'],
-   slots:[[838,253]]},
+   slots:[[802,251]]},
   // 雙簧管
   {id:'Ob',  abbr:'Ob',  label:'Oboe',    fam:'雙簧管', members:['陳佩雯'],
-   slots:[[419,62]]},
+   slots:[[421,71]]},
   {id:'Ob2', abbr:'Ob',  label:'Oboe',    fam:'雙簧管', alwaysPresent:true, members:[],
-   slots:[[448,132]]},
+   slots:[[465,137]]},
   // 低音管
   {id:'Bsn', abbr:'Bsn', label:'Bassoon', fam:'雙簧管', alwaysPresent:true, members:[],
    slots:[[232,163]]},
   // 豎笛
   {id:'Cl1', abbr:'Cl',  label:'1st Cl',  fam:'豎笛', members:['林尚頤','張捷勝'],
-   slots:[[987,83],[944,143]]},
+   slots:[[966,86],[919,148]]},
   {id:'EbCl',abbr:'Eb',  label:'Eb Cl',   fam:'豎笛', alwaysPresent:true, members:[],
-   slots:[[899,201]]},
+   slots:[[869,206]]},
   {id:'Cl2', abbr:'Cl',  label:'2nd Cl',  fam:'豎笛', members:['楊舒喻','王昱婷'],
    slots:[[1058,145],[1007,214]]},
   {id:'Cl3', abbr:'Cl',  label:'3rd Cl',  fam:'豎笛', members:['吳欣晏','鄭伊玲'],
@@ -134,7 +134,7 @@ const GROUPS = [
    slots:[[329,313]]},
   // 法國號
   {id:'Hn',  abbr:'Hn',  label:'Horn',    fam:'法國號', members:['江宛容','賴易良','郭柔君','郭盈萱','李冠達','黃昱寧'],
-   slots:[[904,447],[980,399],[1044,336],[1093,266],[1133,196],[822,490]]},
+   slots:[[904,447],[980,399],[1044,336],[1104,278],[1146,203],[822,490]]},
   // 小號
   {id:'Tp',  abbr:'Tp',  label:'Trumpet', fam:'小號',
    members:['林志祥','林辰蓉','林政勳','蔡嘉憲','曾芷庭','卓語喬','曾建斌','林建勳','陸慧敏'],
@@ -162,6 +162,8 @@ const GROUPS = [
 // 打擊（文字框）
 const PERC = {fam:'打擊', members:['王姿云','王郁淇','鄭伊琳','施妤柔','黃玳歆','林欣儀','劉雋軒','李佳融'],
   box:[150,598,222,96]};   // x,y,w,h
+// 器材需求框（位置可拖曳）
+const EQUIP = {box:[1080,575,185,110]};  // x,y,w,h
 
 const FAM_ORDER = ['長笛','雙簧管','豎笛','薩克斯風','法國號','小號','長號','上低音號','低音號','低音提琴','鋼琴','打擊'];
 const DEFAULT_CSV_URL="https://docs.google.com/spreadsheets/d/1ZAFSh-IXcQv7YozLhxAVm6M17vg3BIEM3j4IBdWF_Kk/export?format=csv";
@@ -173,10 +175,10 @@ GROUPS.forEach(g=> g.state=g.slots.map(()=>!!g.alwaysPresent));
 let percPresent=0;
 
 // 記住原始座標（供「重設座標」）＋讀取瀏覽器存的自訂座標
-const DEFAULTS={perc:JSON.parse(JSON.stringify(PERC.box))};
+const DEFAULTS={perc:JSON.parse(JSON.stringify(PERC.box)), equip:JSON.parse(JSON.stringify(EQUIP.box))};
 GROUPS.forEach(g=> DEFAULTS[g.id]=JSON.parse(JSON.stringify(g.slots)));
 function saveCoords(){
-  const d={perc:PERC.box}; GROUPS.forEach(g=> d[g.id]=g.slots);
+  const d={perc:PERC.box, equip:EQUIP.box}; GROUPS.forEach(g=> d[g.id]=g.slots);
   try{localStorage.setItem('seatCoords_v1',JSON.stringify(d));}catch(e){}
 }
 function loadCoords(){
@@ -184,6 +186,7 @@ function loadCoords(){
     const d=JSON.parse(localStorage.getItem('seatCoords_v1')||'null'); if(!d) return;
     GROUPS.forEach(g=>{ if(d[g.id]&&d[g.id].length===g.slots.length) g.slots=d[g.id]; });
     if(d.perc&&d.perc.length===4) PERC.box=d.perc;
+    if(d.equip&&d.equip.length===4) EQUIP.box=d.equip;
   }catch(e){}
 }
 loadCoords();
@@ -290,8 +293,9 @@ function render(){
   const stands     = 1 + nonPercOn - pianoN;           // 指揮1 + 非打擊出席 - 鋼琴
   const chairs     = nonPercOn - pianoN - bassN;        // 非打擊出席 - 鋼琴 - 低音提琴
   const highChairs = bassN;                             // 低音提琴出席人數
-  const ex=1080,ey=575,ew=185,eh=110;
-  const ebox=el('g',{});
+  const [ex,ey,ew,eh]=EQUIP.box;
+  const ebox=el('g',{style:'cursor:'+(editMode?'move':'default')});
+  if(editMode) ebox.addEventListener('pointerdown',ev=>startDrag({type:'equip'},ev));
   ebox.appendChild(el('rect',{x:ex,y:ey,width:ew,height:eh,rx:12,
     fill:'#fefce8',stroke:'#ca8a04','stroke-width':1.8}));
   ebox.appendChild(el('text',{x:ex+ew/2,y:ey+22,'text-anchor':'middle',
@@ -335,6 +339,7 @@ function startDrag(ref,ev){ ev.preventDefault(); drag=ref;
 function onMove(ev){ if(!drag) return; const [x,y]=svgPt(ev);
   if(drag.type==='slot') drag.g.slots[drag.i]=[x,y];
   else if(drag.type==='perc'){ PERC.box[0]=x-PERC.box[2]/2; PERC.box[1]=y-PERC.box[3]/2; }
+  else if(drag.type==='equip'){ EQUIP.box[0]=x-EQUIP.box[2]/2; EQUIP.box[1]=y-EQUIP.box[3]/2; }
   render(); }
 function endDrag(){ drag=null; saveCoords();
   window.removeEventListener('pointermove',onMove); window.removeEventListener('pointerup',endDrag); }
@@ -401,13 +406,15 @@ document.getElementById('editBtn').onclick=e=>{ editMode=!editMode;
 document.getElementById('resetBtn').onclick=()=>{
   GROUPS.forEach(g=> g.slots=JSON.parse(JSON.stringify(DEFAULTS[g.id])));
   PERC.box=JSON.parse(JSON.stringify(DEFAULTS.perc));
+  EQUIP.box=JSON.parse(JSON.stringify(DEFAULTS.equip));
   try{localStorage.removeItem('seatCoords_v1');}catch(e){}
   if(attendance&&curDate) applyDate(); else render();
   showMsg('已重設為預設座標','#64748b'); };
 document.getElementById('dumpBtn').onclick=()=>{
   let s='// 貼回 GROUPS 的對應 slots：\n';
   GROUPS.forEach(g=> s+=`${g.id}: [${g.slots.map(p=>'['+p[0]+','+p[1]+']').join(',')}]\n`);
-  s+=`PERC.box: [${PERC.box.join(',')}]`;
+  s+=`PERC.box: [${PERC.box.join(',')}]\n`;
+  s+=`EQUIP.box: [${EQUIP.box.join(',')}]`;
   const ta=document.getElementById('dumpOut'); ta.style.display='block'; ta.value=s; ta.select();
   const d=document.querySelector('details'); if(d) d.open=true;
   showMsg('座標已輸出到下方進階區（可複製給我貼進檔案）','#059669'); };
